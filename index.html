@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Escargombre 🐌🔥 — Prototype Web</title>
+<style>
+  :root{
+    --bg:#0f1221; --panel:#171a2c; --ink:#eaf0ff; --muted:#97a0c0;
+    --accent:#7cfcc2; --accent2:#ffd166; --danger:#ff5470; --ok:#7cff7c;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Arial;
+    color:var(--ink); background:radial-gradient(90vmax 90vmax at 20% -10%,#1b2040 0%,#0b0e1b 70%, #070912 100%);
+    display:flex; flex-direction:column; gap:16px; padding:16px;
+  }
+  header{display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap}
+  header h1{margin:0; font-size:clamp(20px,3.8vw,36px)}
+  header .subtitle{color:var(--muted); font-size:14px}
+  .wrap{display:grid; grid-template-columns: 320px 1fr; gap:16px}
+  @media (max-width: 980px){ .wrap{grid-template-columns:1fr} }
+  .card{
+    background:linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02));
+    border:1px solid rgba(255,255,255,0.08);
+    border-radius:14px; padding:14px; box-shadow:0 6px 24px rgba(0,0,0,0.25);
+  }
+  .controls label{display:block; font-weight:600; margin:10px 0 6px}
+  .controls select, .controls button{
+    width:100%; padding:10px 12px; border-radius:10px; border:1px solid rgba(255,255,255,0.15);
+    background:#0f1324; color:var(--ink); font-size:15px;
+  }
+  .controls button{cursor:pointer}
+  .controls .row{display:grid; grid-template-columns: 1fr 1fr; gap:10px}
+  .legend{display:grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap:8px; margin-top:8px; font-size:14px; color:var(--muted)}
+  .legend span{display:flex; align-items:center; gap:8px}
+  .badge{display:inline-block; min-width:18px; height:18px; border-radius:4px; border:1px solid rgba(255,255,255,0.25)}
+  .b-light{background:#f7f7ff}
+  .b-shadow{background:#1a1f2f}
+  .b-leaf{background:#2b6a3f}
+  .b-esc{background:#fffb; border-color:#fff5}
+  .b-exit{background:#6a5acd}
+  .b-wall{background:#555a6b}
+  canvas{width:100%; height:auto; border-radius:12px; background:#0b0d18; border:1px solid rgba(255,255,255,0.08)}
+  .hud{display:grid; grid-template-columns: repeat(3,1fr); gap:10px; margin-top:10px}
+  .meter{background:#0c1122; border:1px solid rgba(255,255,255,0.1); border-radius:10px; padding:8px}
+  .meter .bar{height:10px; border-radius:8px; background:linear-gradient(90deg,var(--accent),#4be3ff); width:0%}
+  .meter .bar.heat{background:linear-gradient(90deg,#f7a,#f33)}
+  .meter .bar.boost{background:linear-gradient(90deg,#9f7cff,#6af)}
+  .meter small{display:block; color:var(--muted)}
+  .notice{color:var(--muted); font-size:13px}
+  .pill{display:inline-block; padding:4px 10px; border-radius:999px; border:1px solid rgba(255,255,255,0.15); font-size:12px; color:var(--accent2)}
+  footer{color:var(--muted); font-size:12px; margin-top:4px}
+  dialog{
+    border:none; border-radius:12px; padding:0; max-width:min(520px,92vw);
+    background:#101428; color:var(--ink); box-shadow:0 20px 80px rgba(0,0,0,0.5);
+  }
+  .modal{padding:16px}
+  .modal h3{margin:0 0 8px}
+  .seq{display:flex; gap:6px; margin:10px 0}
+  .seq div{width:40px; height:40px; border-radius:8px; display:grid; place-items:center; font-weight:700;
+    border:1px solid rgba(255,255,255,0.2); background:#131936}
+  .keys{display:grid; grid-template-columns: repeat(5, 1fr); gap:8px}
+  .keys button{padding:12px; border-radius:10px; border:1px solid rgba(255,255,255,0.2); background:#141a33; color:var(--ink); cursor:pointer}
+  .inline{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
+  .ok{color:var(--ok)} .danger{color:var(--danger)}
+  .spacer{height:4px}
+  .title-row{display:flex; align-items:center; gap:10px; justify-content:space-between}
+</style>
+</head>
+<body>
+  <header>
+    <div>
+      <div class="title-row">
+        <h1>Escargombre <span class="pill">prototype jouable</span></h1>
+      </div>
+      <div class="subtitle">Résous des puzzles (Facile/Moyen/Difficile) pour avancer. Mange des <b>feuilles</b> pour accélérer. Évite l’<b>ombre</b> qui brûle !</div>
+    </div>
+  </header>
+
+  <div class="wrap">
+    <!-- panneau de paramètres / règles -->
+    <aside class="card controls">
+      <label for="difficulty">Difficulté</label>
+      <select id="difficulty">
+        <option value="easy">Facile — feuilles nombreuses, puzzles courts</option>
+        <option value="medium" selected>Moyen — feuilles modérées, puzzles moyens</option>
+        <option value="hard">Difficile — feuilles rares, puzzles exigeants</option>
+      </select>
+
+      <div class="row" style="margin-top:10px">
+        <button id="newLevel">Nouveau niveau</button>
+        <button id="showRules">Règles</button>
+      </div>
+
+      <label style="margin-top:14px">Légende</label>
+      <div class="legend">
+        <span><span class="badge b-esc"></span> Escargot (toi)</span>
+        <span><span class="badge b-leaf"></span> Feuille (boost vitesse)</span>
+        <span><span class="badge b-light"></span> Lumière (sécurisant)</span>
+        <span><span class="badge b-shadow"></span> Ombre (chauffe → brûle)</span>
+        <span><span class="badge b-exit"></span> Sortie (verrouillée)</span>
+        <span><span class="badge b-wall"></span> Mur/rocher</span>
+      </div>
+
+      <div style="margin-top:12px">
+        <div class="notice">
+          <b>Contrôles :</b> flèches du clavier pour bouger. Marche/boost selon les feuilles mangées.
+          Atteins la <b>sortie</b> et résous le <b>puzzle</b> pour déverrouiller le niveau.
+        </div>
+      </div>
+
+      <div style="margin-top:12px">
+        <label>Design demandé (critères intégrés)</label>
+        <ul class="notice">
+          <li>Puzzles <b>Facile/Moyen/Difficile</b> obligatoires pour avancer</li>
+          <li>Escargot lent au début, qui <b>mange des feuilles</b> pour accélérer</li>
+          <li>Plus le niveau est difficile : <b>moins de feuilles</b>, <b>puzzles plus durs</b>, base un peu moins lente</li>
+          <li>L’<b>ombre brûle</b> si on y reste (chauffe cumulée)</li>
+        </ul>
+      </div>
+    </aside>
+
+    <!-- zone de jeu -->
+    <main class="card">
+      <canvas id="game" width="576" height="576" aria-label="Zone de jeu"></canvas>
+
+      <div class="hud">
+        <div class="meter">
+          <small>Chaleur (ombre)</small>
+          <div class="bar heat" id="heatBar"></div>
+        </div>
+        <div class="meter">
+          <small>Boost (feuilles)</small>
+          <div class="bar boost" id="boostBar"></div>
+        </div>
+        <div class="meter">
+          <small>Progression</small>
+          <div class="bar" id="progressBar"></div>
+        </div>
+      </div>
+      <div class="spacer"></div>
+      <div class="inline">
+        <span id="status" class="notice">Prêt.</span>
+      </div>
+      <footer>Astuce : planifie tes sprints de lumière en lumière. Dans les zones difficiles, économise ton boost pour traverser les longs couloirs d’ombre.</footer>
+    </main>
+  </div>
+
+  <!-- MODAL puzzle -->
+  <dialog id="puzzleModal">
+    <div class="modal">
+      <h3>Puzzle : reproduis la séquence</h3>
+      <div class="notice">Mémorise les symboles affichés quelques secondes, puis clique-les dans le bon ordre pour déverrouiller la sortie.</div>
+      <div class="seq" id="seq"></div>
+      <div class="keys" id="keys"></div>
+      <div class="inline" style="margin-top:10px">
+        <button id="retry">Rejouer l’aperçu</button>
+        <button id="closePuzzle">Abandonner</button>
+        <span id="puzzleMsg" class="notice"></span>
+      </div>
+    </div>
+  </dialog>
+
+<script>
+(() => {
+  // --- paramètres par difficulté ---
+  const DIFF = {
+    easy:   { grid:12, leafRate:0.12, shadowRate:0.25, wallRate:0.06, heatPerStep:7, coolPerStep:9, maxHeat:100, baseStep:1, boostOnLeaf:6, puzzleLen:3 },
+    medium: { grid:12, leafRate:0.08, shadowRate:0.35, wallRate:0.08, heatPerStep:10, coolPerStep:7, maxHeat:100, baseStep:1, boostOnLeaf:4, puzzleLen:4 },
+    hard:   { grid:12, leafRate:0.05, shadowRate:0.5,  wallRate:0.10, heatPerStep:13, coolPerStep:6, maxHeat:100, baseStep:2, boostOnLeaf:3, puzzleLen:5 }
+  };
+
+  // --- constantes visuelles ---
+  const TILE = 48; // 12x12 sur canvas 576
+  const TYPE = { LIGHT:0, SHADOW:1, WALL:2, LEAF:3, EXIT:4 };
+
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+
+  const heatBar   = document.getElementById('heatBar');
+  const boostBar  = document.getElementById('boostBar');
+  const progBar   = document.getElementById('progressBar');
+  const statusEl  = document.getElementById('status');
+
+  const difficultySel = document.getElementById('difficulty');
+  const newLevelBtn   = document.getElementById('newLevel');
+  const showRulesBtn  = document.getElementById('showRules');
+
+  const puzzleModal = document.getElementById('puzzleModal');
+  const seqEl = document.getElementById('seq');
+  const keysEl = document.getElementById('keys');
+  const retryBtn = document.getElementById('retry');
+  const closePuzzle = document.getElementById('closePuzzle');
+  const puzzleMsg = document.getElementById('puzzleMsg');
+
+  // --- état du jeu ---
+  let st = {};
+  let keyHeld = null;
+
+  function rand(){ return Math.random(); }
+  function choice(a){ return a[(Math.random()*a.length)|0]; }
+
+  function makeLevel() {
+    const dkey = difficultySel.value;
+    const D = DIFF[dkey];
+    const N = D.grid;
+
+    const grid = [];
+    for (let y=0;y<N;y++){
+      const row=[];
+      for (let x=0;x<N;x++){
+        // bordures en lumière par défaut (évite spawn bloqué)
+        let t = (rand()<D.shadowRate && !(x===0||y===0||x===N-1||y===N-1))? TYPE.SHADOW : TYPE.LIGHT;
+        // rochers
+        if (rand()<D.wallRate && t!==TYPE.LIGHT && !(x===1 && y===1)) t = TYPE.WALL;
+        row.push(t);
+      }
+      grid.push(row);
+    }
+    // placer feuilles
+    let leafCount=0;
+    for (let y=1;y<N-1;y++){
+      for (let x=1;x<N-1;x++){
+        if (grid[y][x]===TYPE.LIGHT || grid[y][x]===TYPE.SHADOW){
+          if (rand() < DIFF[dkey].leafRate){
+            grid[y][x] = TYPE.LEAF;
+            leafCount++;
+          }
+        }
+      }
+    }
+    // entrée / sortie
+    grid[1][1] = TYPE.LIGHT;
+    let exitPos = {x:N-2,y:N-2};
+    grid[exitPos.y][exitPos.x] = TYPE.EXIT;
+
+    st = {
+      dkey, D, N, grid,
+      player:{x:1,y:1, heat:0, boost:0, alive:true, unlocked:false},
+      progress:0,
+      seq:[], seqInput:[], seqShown:false,
+    };
+    status(`Difficulté: ${dkey.toUpperCase()} — Trouve la sortie et résous le puzzle.`);
+    draw();
+    updateHUD();
+  }
+
+  function draw(){
+    const {N,grid,player} = st;
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+
+    for (let y=0;y<N;y++){
+      for (let x=0;x<N;x++){
+        const t = grid[y][x];
+        // sol
+        if (t===TYPE.LIGHT || t===TYPE.LEAF || t===TYPE.EXIT){
+          ctx.fillStyle = '#e9edf7';
+        } else if (t===TYPE.SHADOW){
+          ctx.fillStyle = '#141a2a';
+        } else if (t===TYPE.WALL){
+          ctx.fillStyle = '#565d76';
+        }
+        ctx.fillRect(x*TILE, y*TILE, TILE, TILE);
+
+        // détails
+        if (t===TYPE.LEAF){
+          drawLeaf(x,y);
+        }
+        if (t===TYPE.EXIT){
+          // porte violette
+          ctx.fillStyle = '#6a5acd';
+          ctx.fillRect(x*TILE+8, y*TILE+8, TILE-16, TILE-16);
+          ctx.fillStyle = '#cabdff';
+          ctx.fillRect(x*TILE+TILE/2-4, y*TILE+10, 8, 12);
+        }
+      }
+    }
+    // quadrillage léger
+    ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+    for (let i=0;i<=N;i++){
+      ctx.beginPath(); ctx.moveTo(0,i*TILE); ctx.lineTo(N*TILE,i*TILE); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(i*TILE,0); ctx.lineTo(i*TILE,N*TILE); ctx.stroke();
+    }
+
+    // joueur
+    drawSnail(player.x, player.y, player.heat/st.D.maxHeat);
+  }
+
+  function drawLeaf(x,y){
+    const cx = x*TILE + TILE/2, cy = y*TILE + TILE/2;
+    ctx.fillStyle = '#2b6a3f';
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, 12, 18, Math.PI/6, 0, Math.PI*2);
+    ctx.fill();
+    // nervure
+    ctx.strokeStyle = '#9ad7a7';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy-12); ctx.lineTo(cx, cy+12); ctx.stroke();
+    ctx.lineWidth = 1;
+  }
+
+  function drawSnail(x,y,heatRatio){
+    const px = x*TILE, py = y*TILE;
+    // coquille
+    ctx.fillStyle = '#f3e7c6';
+    ctx.beginPath();
+    ctx.arc(px+TILE*0.6, py+TILE*0.55, 14, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#d8c79e';
+    ctx.beginPath();
+    ctx.arc(px+TILE*0.6, py+TILE*0.55, 7, 0, Math.PI*2); ctx.fill();
+    // corps
+    ctx.fillStyle = '#b5ceb7';
+    ctx.fillRect(px+8, py+TILE*0.6, 28, 10);
+    ctx.fillRect(px+8, py+TILE*0.5, 12, 8);
+    // antennes
+    ctx.strokeStyle = '#9bb0a0'; ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(px+12, py+TILE*0.5); ctx.lineTo(px+6, py+TILE*0.35);
+    ctx.moveTo(px+18, py+TILE*0.5); ctx.lineTo(px+12, py+TILE*0.3);
+    ctx.stroke();
+
+    // lueur de chaleur si dans l'ombre
+    if (heatRatio>0.01){
+      const alpha = Math.min(0.6, heatRatio+0.1);
+      ctx.fillStyle = `rgba(255,80,80,${alpha})`;
+      ctx.beginPath();
+      ctx.arc(px+TILE/2, py+TILE/2, 20+heatRatio*18, 0, Math.PI*2); ctx.fill();
+    }
+  }
+
+  function isWalkable(x,y){
+    const {N,grid} = st;
+    if (x<0||y<0||x>=N||y>=N) return false;
+    return grid[y][x] !== TYPE.WALL;
+  }
+
+  function step(dx,dy){
+    if (!st.player.alive) return;
+    const speedStep = st.D.baseStep + (st.player.boost>0 ? 1 : 0);
+    let moves = Math.max(1, speedStep);
+
+    while (moves-->0){
+      const nx = st.player.x + Math.sign(dx);
+      const ny = st.player.y + Math.sign(dy);
+      if (!isWalkable(nx,ny)) break;
+      st.player.x = nx; st.player.y = ny;
+
+      // ramassage feuille
+      if (st.grid[ny][nx]===TYPE.LEAF){
+        st.grid[ny][nx] = TYPE.LIGHT;
+        st.player.boost = Math.min(st.player.boost + st.D.boostOnLeaf, 12);
+        status('Miam ! Boost de vitesse gagné.');
+      }
+
+      // chaleur / ombre
+      const t = st.grid[ny][nx];
+      if (t===TYPE.SHADOW){
+        st.player.heat = Math.min(st.D.maxHeat, st.player.heat + st.D.heatPerStep);
+        if (st.player.heat >= st.D.maxHeat){
+          st.player.alive = false;
+          status('🔥 Tu as brûlé dans l’ombre ! Appuie sur "Nouveau niveau".');
+        }
+      } else {
+        st.player.heat = Math.max(0, st.player.heat - st.D.coolPerStep);
+      }
+
+      // boost s’use par déplacement
+      if (st.player.boost>0) st.player.boost--;
+
+      // sortie ?
+      if (t===TYPE.EXIT){
+        if (!st.player.unlocked){
+          openPuzzle();
+          break;
+        }
+      }
+    }
+
+    draw();
+    updateHUD();
+  }
+
+  // --- HUD ---
+  function updateHUD(){
+    const heatP = (st.player.heat / st.D.maxHeat)*100;
+    heatBar.style.width = `${Math.max(0, Math.min(100, heatP))}%`;
+    const boostP = (st.player.boost / 12)*100;
+    boostBar.style.width = `${Math.max(0, Math.min(100, boostP))}%`;
+
+    const prog = st.player.unlocked ? 100 : Math.floor( ( (st.player.x+st.player.y) / ((st.N-1)*2) )*80 );
+    progBar.style.width = `${prog}%`;
+  }
+
+  function status(msg){ statusEl.textContent = msg; }
+
+  // --- Puzzle (séquence mémoire) ---
+  const SYMBOLS = ['◆','●','▲','■','✦','★','✚','☼','☾','♣'];
+  function openPuzzle(){
+    // génère une séquence selon la difficulté
+    st.seq = [];
+    for (let i=0;i<st.D.puzzleLen;i++) st.seq.push(choice(SYMBOLS));
+    st.seqInput = [];
+    st.seqShown = false;
+    renderPuzzleKeys();
+    renderSeq(true);
+    puzzleModal.showModal();
+    puzzleMsg.textContent = '';
+  }
+
+  function renderSeq(play=false){
+    seqEl.innerHTML = '';
+    st.seq.forEach(s => {
+      const d = document.createElement('div'); d.textContent = s; seqEl.appendChild(d);
+    });
+    if (play){
+      st.seqShown = true;
+      // masquer après court délai
+      setTimeout(()=>{ seqEl.querySelectorAll('div').forEach(d=>d.textContent='?'); st.seqShown=false; }, 1800 + st.D.puzzleLen*250);
+    }
+  }
+
+  function renderPuzzleKeys(){
+    keysEl.innerHTML = '';
+    const pool = [...new Set([...st.seq, ...Array(Math.max(0,10-st.seq.length)).fill(0).map(()=>choice(SYMBOLS))])];
+    // mélange
+    for (let i=pool.length-1;i>0;i--){ const j=(Math.random()* (i+1))|0; [pool[i],pool[j]]=[pool[j],pool[i]]; }
+    pool.forEach(s=>{
+      const b = document.createElement('button'); b.textContent = s;
+      b.addEventListener('click', ()=> onPuzzlePress(s));
+      keysEl.appendChild(b);
+    });
+  }
+
+  function onPuzzlePress(sym){
+    if (st.seqInput.length >= st.seq.length) return;
+    st.seqInput.push(sym);
+
+    const idx = st.seqInput.length-1;
+    if (st.seq[idx] !== sym){
+      st.seqInput = [];
+      puzzleMsg.textContent = '❌ Mauvais ordre ! Essaie encore.';
+      puzzleMsg.className = 'notice danger';
+      return;
+    }
+    // bon symbole
+    if (st.seqInput.length === st.seq.length){
+      st.player.unlocked = true;
+      puzzleMsg.textContent = '✅ Sortie déverrouillée !';
+      puzzleMsg.className = 'notice ok';
+      setTimeout(()=>{
+        puzzleModal.close();
+        status('La porte est ouverte ! Tu as terminé le niveau 🎉');
+        progBar.style.width='100%';
+      }, 600);
+    } else {
+      puzzleMsg.textContent = `Bien ! ${st.seqInput.length}/${st.seq.length}`;
+      puzzleMsg.className = 'notice';
+    }
+  }
+
+  retryBtn.addEventListener('click', ()=> renderSeq(true));
+  closePuzzle.addEventListener('click', ()=> puzzleModal.close());
+
+  // --- Entrées clavier ---
+  window.addEventListener('keydown', (e)=>{
+    if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)){
+      e.preventDefault();
+      keyHeld = e.key;
+      tickMove();
+    }
+  });
+  window.addEventListener('keyup', (e)=>{ if (e.key===keyHeld) keyHeld=null; });
+
+  function tickMove(){
+    if (!keyHeld || !st.player.alive) return;
+    const map = {ArrowUp:[0,-1], ArrowDown:[0,1], ArrowLeft:[-1,0], ArrowRight:[1,0]};
+    const [dx,dy] = map[keyHeld];
+    step(dx,dy);
+  }
+
+  // --- UI ---
+  newLevelBtn.addEventListener('click', makeLevel);
+  showRulesBtn.addEventListener('click', ()=>{
+    alert(
+`RÈGLES D’ESCARGOMBRE
+• Puzzles à résoudre (facile/moyen/difficile) pour ouvrir la sortie.
+• Mange des feuilles pour gagner un boost de vitesse temporaire.
+• L’ombre chauffe à chaque pas : si la jauge de chaleur est pleine, tu brûles !
+• Plus la difficulté est élevée :
+   – Base un peu moins lente (tu avances parfois de 2 cases/mouvement),
+   – Moins de feuilles disponibles,
+   – Puzzles plus longs,
+   – Ombre plus présente et plus dangereuse.`
+    );
+  });
+
+  // init
+  makeLevel();
+})();
+</script>
+</body>
+</html>
