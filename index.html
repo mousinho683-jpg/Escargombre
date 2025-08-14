@@ -56,17 +56,6 @@
     border:none; border-radius:12px; padding:0; max-width:min(520px,92vw);
     background:#101428; color:var(--ink); box-shadow:0 20px 80px rgba(0,0,0,0.5);
   }
-  .modal{padding:16px}
-  .modal h3{margin:0 0 8px}
-  .seq{display:flex; gap:6px; margin:10px 0}
-  .seq div{width:40px; height:40px; border-radius:8px; display:grid; place-items:center; font-weight:700;
-    border:1px solid rgba(255,255,255,0.2); background:#131936}
-  .keys{display:grid; grid-template-columns: repeat(5, 1fr); gap:8px}
-  .keys button{padding:12px; border-radius:10px; border:1px solid rgba(255,255,255,0.2); background:#141a33; color:var(--ink); cursor:pointer}
-  .inline{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
-  .ok{color:var(--ok)} .danger{color:var(--danger)}
-  .spacer{height:4px}
-  .title-row{display:flex; align-items:center; gap:10px; justify-content:space-between}
 </style>
 </head>
 <body>
@@ -103,21 +92,8 @@
         <span><span class="badge b-wall"></span> Mur/rocher</span>
       </div>
 
-      <div style="margin-top:12px">
-        <div class="notice">
-          <b>Contrôles :</b> flèches du clavier pour bouger. Marche/boost selon les feuilles mangées.
-          Atteins la <b>sortie</b> et résous le <b>puzzle</b> pour déverrouiller le niveau.
-        </div>
-      </div>
-
-      <div style="margin-top:12px">
-        <label>Design demandé (critères intégrés)</label>
-        <ul class="notice">
-          <li>Puzzles <b>Facile/Moyen/Difficile</b> obligatoires pour avancer</li>
-          <li>Escargot lent au début, qui <b>mange des feuilles</b> pour accélérer</li>
-          <li>Plus le niveau est difficile : <b>moins de feuilles</b>, <b>puzzles plus durs</b>, base un peu moins lente</li>
-          <li>L’<b>ombre brûle</b> si on y reste (chauffe cumulée)</li>
-        </ul>
+      <div style="margin-top:12px" class="notice">
+        <b>Contrôles :</b> flèches du clavier pour bouger. Sur mobile, utiliser le pad tactile.
       </div>
     </aside>
 
@@ -138,12 +114,17 @@
         </div>
       </div>
 
-      <!-- Pad tactile mobile -->
-      <div id="touchPad" style="position:fixed; bottom:20px; left:50%; transform:translateX(-50%); display:flex; gap:12px; z-index:1000;">
-        <button data-dir="up">⬆️</button>
-        <button data-dir="left">⬅️</button>
-        <button data-dir="down">⬇️</button>
-        <button data-dir="right">➡️</button>
+      <!-- contrôles mobiles -->
+      <div id="mobile-controls" style="position:fixed; bottom:20px; left:50%; transform:translateX(-50%); display:grid; grid-template-columns: repeat(3, 60px); grid-template-rows: repeat(3, 60px); gap:10px; z-index:1000;">
+        <div></div>
+        <button onclick="step(0, -1)">⬆️</button>
+        <div></div>
+        <button onclick="step(-1, 0)">⬅️</button>
+        <div></div>
+        <button onclick="step(1, 0)">➡️</button>
+        <div></div>
+        <button onclick="step(0, 1)">⬇️</button>
+        <div></div>
       </div>
     </main>
   </div>
@@ -180,7 +161,6 @@ function draw(){
       ctx.fillRect(x*tileSize, y*tileSize, tileSize, tileSize);
     }
   }
-  // joueur
   ctx.fillStyle="#fff";
   ctx.fillRect(player.x*tileSize, player.y*tileSize, tileSize, tileSize);
 }
@@ -208,7 +188,6 @@ function updateHUD(){
 draw();
 updateHUD();
 
-// clavier
 document.addEventListener('keydown',e=>{
   switch(e.key){
     case 'ArrowUp': step(0,-1); break;
@@ -218,27 +197,6 @@ document.addEventListener('keydown',e=>{
   }
   draw();
 });
-
-// pad tactile
-const touchPad = document.getElementById('touchPad');
-touchPad.querySelectorAll('button').forEach(btn => {
-  btn.addEventListener('touchstart', e => {
-    e.preventDefault();
-    const dir = btn.dataset.dir;
-    switch(dir){
-      case 'up':    step(0,-1); break;
-      case 'down':  step(0,1); break;
-      case 'left':  step(-1,0); break;
-      case 'right': step(1,0); break;
-    }
-    draw();
-    updateHUD();
-  });
-});
-
-// boutons
-document.getElementById('newLevel').onclick = ()=>{alert("Nouveau niveau généré !")}
-document.getElementById('showRules').onclick = ()=>{alert("Règles : avance, mange des feuilles, évite l’ombre et résous les puzzles.")}
 </script>
 </body>
 </html>
