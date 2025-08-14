@@ -3,200 +3,151 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Escargombre 🐌🔥 — Prototype Web</title>
+<title>Escargombre 🐌🔥</title>
 <style>
-  :root{
-    --bg:#0f1221; --panel:#171a2c; --ink:#eaf0ff; --muted:#97a0c0;
-    --accent:#7cfcc2; --accent2:#ffd166; --danger:#ff5470; --ok:#7cff7c;
-  }
-  *{box-sizing:border-box}
-  html,body{height:100%}
-  body{
-    margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Arial;
-    color:var(--ink); background:radial-gradient(90vmax 90vmax at 20% -10%,#1b2040 0%,#0b0e1b 70%, #070912 100%);
-    display:flex; flex-direction:column; gap:16px; padding:16px;
-  }
-  header{display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap}
-  header h1{margin:0; font-size:clamp(20px,3.8vw,36px)}
-  header .subtitle{color:var(--muted); font-size:14px}
-  .wrap{display:grid; grid-template-columns: 320px 1fr; gap:16px}
-  @media (max-width: 980px){ .wrap{grid-template-columns:1fr} }
-  .card{
-    background:linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02));
-    border:1px solid rgba(255,255,255,0.08);
-    border-radius:14px; padding:14px; box-shadow:0 6px 24px rgba(0,0,0,0.25);
-  }
-  .controls label{display:block; font-weight:600; margin:10px 0 6px}
-  .controls select, .controls button{
-    width:100%; padding:10px 12px; border-radius:10px; border:1px solid rgba(255,255,255,0.15);
-    background:#0f1324; color:var(--ink); font-size:15px;
-  }
-  .controls button{cursor:pointer}
-  .controls .row{display:grid; grid-template-columns: 1fr 1fr; gap:10px}
-  .legend{display:grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap:8px; margin-top:8px; font-size:14px; color:var(--muted)}
-  .legend span{display:flex; align-items:center; gap:8px}
-  .badge{display:inline-block; min-width:18px; height:18px; border-radius:4px; border:1px solid rgba(255,255,255,0.25)}
-  .b-light{background:#f7f7ff}
-  .b-shadow{background:#1a1f2f}
-  .b-leaf{background:#2b6a3f}
-  .b-esc{background:#fffb; border-color:#fff5}
-  .b-exit{background:#6a5acd}
-  .b-wall{background:#555a6b}
-  canvas{width:100%; height:auto; border-radius:12px; background:#0b0d18; border:1px solid rgba(255,255,255,0.08)}
-  .hud{display:grid; grid-template-columns: repeat(3,1fr); gap:10px; margin-top:10px}
-  .meter{background:#0c1122; border:1px solid rgba(255,255,255,0.1); border-radius:10px; padding:8px}
-  .meter .bar{height:10px; border-radius:8px; background:linear-gradient(90deg,var(--accent),#4be3ff); width:0%}
-  .meter .bar.heat{background:linear-gradient(90deg,#f7a,#f33)}
-  .meter .bar.boost{background:linear-gradient(90deg,#9f7cff,#6af)}
-  .meter small{display:block; color:var(--muted)}
-  .notice{color:var(--muted); font-size:13px}
-  .pill{display:inline-block; padding:4px 10px; border-radius:999px; border:1px solid rgba(255,255,255,0.15); font-size:12px; color:var(--accent2)}
-  footer{color:var(--muted); font-size:12px; margin-top:4px}
-  dialog{
-    border:none; border-radius:12px; padding:0; max-width:min(520px,92vw);
-    background:#101428; color:var(--ink); box-shadow:0 20px 80px rgba(0,0,0,0.5);
-  }
+  body{margin:0;background:#0b0e1b;color:#fff;font-family:sans-serif;display:flex;flex-direction:column;align-items:center;padding:10px}
+  canvas{background:#0f1324;border:2px solid #333;image-rendering:pixelated}
+  #mobile-controls{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);display:grid;grid-template-columns:repeat(3,60px);grid-template-rows:repeat(3,60px);gap:10px;z-index:1000}
+  #mobile-controls button{font-size:24px;border:none;border-radius:8px;background:#222;color:#fff}
+  .hud{margin-top:10px;display:flex;gap:20px;align-items:center}
+  .bar{width:120px;height:10px;background:#222;border:1px solid #555;border-radius:5px;overflow:hidden}
+  .fill{height:100%;background:red;width:0%}
+  .hearts{display:flex;gap:4px}
+  .heart{width:12px;height:12px;background:red;border-radius:2px}
 </style>
 </head>
 <body>
-  <header>
-    <div>
-      <div class="title-row">
-        <h1>Escargombre <span class="pill">prototype jouable</span></h1>
-      </div>
-      <div class="subtitle">Résous des puzzles (Facile/Moyen/Difficile) pour avancer. Mange des <b>feuilles</b> pour accélérer. Évite l’<b>ombre</b> qui brûle !</div>
-    </div>
-  </header>
 
-  <div class="wrap">
-    <aside class="card controls">
-      <label for="difficulty">Difficulté</label>
-      <select id="difficulty">
-        <option value="easy">Facile — feuilles nombreuses, puzzles courts</option>
-        <option value="medium" selected>Moyen — feuilles modérées, puzzles moyens</option>
-        <option value="hard">Difficile — feuilles rares, puzzles exigeants</option>
-      </select>
+<h1>Escargombre 🐌🔥</h1>
+<canvas id="gameCanvas" width="480" height="320"></canvas>
 
-      <div class="row" style="margin-top:10px">
-        <button id="newLevel">Nouveau niveau</button>
-        <button id="showRules">Règles</button>
-      </div>
+<div class="hud">
+  <div>Chaleur: <div class="bar"><div class="fill" id="heatBar"></div></div></div>
+  <div class="hearts" id="hearts"></div>
+  <button id="newLevelBtn">Nouveau niveau</button>
+</div>
 
-      <label style="margin-top:14px">Légende</label>
-      <div class="legend">
-        <span><span class="badge b-esc"></span> Escargot (toi)</span>
-        <span><span class="badge b-leaf"></span> Feuille (boost vitesse)</span>
-        <span><span class="badge b-light"></span> Lumière (sécurisant)</span>
-        <span><span class="badge b-shadow"></span> Ombre (chauffe → brûle)</span>
-        <span><span class="badge b-exit"></span> Sortie (verrouillée)</span>
-        <span><span class="badge b-wall"></span> Mur/rocher</span>
-      </div>
-
-      <div style="margin-top:12px" class="notice">
-        <b>Contrôles :</b> flèches du clavier pour bouger. Sur mobile, utiliser le pad tactile.
-      </div>
-    </aside>
-
-    <main class="card">
-      <canvas id="gameCanvas" width="480" height="360"></canvas>
-      <div class="hud">
-        <div class="meter">
-          <small>Chaleur Ombre</small>
-          <div class="bar heat" id="heatBar"></div>
-        </div>
-        <div class="meter">
-          <small>Boost Vitesse</small>
-          <div class="bar boost" id="boostBar"></div>
-        </div>
-        <div class="meter">
-          <small>Progrès Niveau</small>
-          <div class="bar" id="progressBar"></div>
-        </div>
-      </div>
-
-      <!-- contrôles mobiles -->
-      <div id="mobile-controls" style="position:fixed; bottom:20px; left:50%; transform:translateX(-50%); display:grid; grid-template-columns: repeat(3, 60px); grid-template-rows: repeat(3, 60px); gap:10px; z-index:1000;">
-        <div></div>
-        <button onclick="step(0, -1)">⬆️</button>
-        <div></div>
-        <button onclick="step(-1, 0)">⬅️</button>
-        <div></div>
-        <button onclick="step(1, 0)">➡️</button>
-        <div></div>
-        <button onclick="step(0, 1)">⬇️</button>
-        <div></div>
-      </div>
-    </main>
-  </div>
-
-  <footer>Prototype Escargombre — 2025</footer>
+<!-- Contrôles mobiles -->
+<div id="mobile-controls">
+  <div></div><button onclick="step(0,-1)">⬆️</button><div></div>
+  <button onclick="step(-1,0)">⬅️</button><div></div>
+  <button onclick="step(1,0)">➡️</button>
+  <div></div><button onclick="step(0,1)">⬇️</button><div></div>
+</div>
 
 <script>
-const canvas = document.getElementById('gameCanvas');
-const ctx = canvas.getContext('2d');
-const heatBar = document.getElementById('heatBar');
-const boostBar = document.getElementById('boostBar');
-const progressBar = document.getElementById('progressBar');
-
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
+const heatBar = document.getElementById("heatBar");
+const heartsContainer = document.getElementById("hearts");
 const tileSize = 32;
-let map = [
-  [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-  [1,0,0,2,0,0,0,0,0,0,0,0,0,3,1],
-  [1,0,1,1,1,0,1,1,1,0,1,1,1,0,1],
-  [1,0,0,0,0,0,0,0,0,0,0,2,0,0,1],
-  [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
-];
-let player = {x:1, y:1, heat:0, boost:0, progress:0};
+const cols = 15, rows = 10;
 
-function draw(){
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-  for(let y=0;y<map.length;y++){
-    for(let x=0;x<map[y].length;x++){
-      switch(map[y][x]){
-        case 0: ctx.fillStyle="#0f1324"; break;
-        case 1: ctx.fillStyle="#555a6b"; break;
-        case 2: ctx.fillStyle="#2b6a3f"; break;
-        case 3: ctx.fillStyle="#6a5acd"; break;
+let levels = [];
+let unlockedLevel = 0;
+let currentLevel = 0;
+let player, map;
+
+function generateLevels(){
+  for(let i=0;i<128;i++){
+    let grid = Array.from({length:rows},()=>Array(cols).fill(0));
+    // murs bordures
+    for(let x=0;x<cols;x++){grid[0][x]=1;grid[rows-1][x]=1;}
+    for(let y=0;y<rows;y++){grid[y][0]=1;grid[y][cols-1]=1;}
+    // obstacles, ombre, feuilles
+    for(let y=1;y<rows-1;y++){
+      for(let x=1;x<cols-1;x++){
+        if(Math.random()<0.1) grid[y][x]=1; // mur
+        else if(Math.random()<0.1) grid[y][x]=4; // ombre
+        else if(Math.random()<0.1) grid[y][x]=2; // feuille
       }
-      ctx.fillRect(x*tileSize, y*tileSize, tileSize, tileSize);
     }
+    // sortie violette
+    grid[rows-2][cols-2] = 3;
+    // départ
+    player = {x:1,y:1,heat:0,boost:0,lives:3};
+    levels.push(grid);
   }
-  ctx.fillStyle="#fff";
-  ctx.fillRect(player.x*tileSize, player.y*tileSize, tileSize, tileSize);
 }
 
-function step(dx,dy){
-  const nx = player.x + dx;
-  const ny = player.y + dy;
-  if(map[ny][nx] !== 1){
-    player.x = nx; player.y = ny;
-    const tile = map[ny][nx];
-    if(tile === 2) player.boost = Math.min(100, player.boost+20);
-    if(tile === 3) alert("Niveau terminé !");
-    player.heat = Math.min(100, player.heat+5);
-    player.progress = Math.min(100, player.progress+10);
-    updateHUD();
-  }
+function loadLevel(n){
+  map = JSON.parse(JSON.stringify(levels[n]));
+  player.x=1;player.y=1;
+  player.heat=0;player.boost=0;player.lives=3;
+  updateHUD();
+  draw();
 }
 
 function updateHUD(){
   heatBar.style.width = player.heat + "%";
-  boostBar.style.width = player.boost + "%";
-  progressBar.style.width = player.progress + "%";
+  heartsContainer.innerHTML="";
+  for(let i=0;i<player.lives;i++){
+    let h=document.createElement("div");
+    h.className="heart";
+    heartsContainer.appendChild(h);
+  }
 }
 
-draw();
-updateHUD();
-
-document.addEventListener('keydown',e=>{
-  switch(e.key){
-    case 'ArrowUp': step(0,-1); break;
-    case 'ArrowDown': step(0,1); break;
-    case 'ArrowLeft': step(-1,0); break;
-    case 'ArrowRight': step(1,0); break;
+function draw(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  for(let y=0;y<rows;y++){
+    for(let x=0;x<cols;x++){
+      switch(map[y][x]){
+        case 0: ctx.fillStyle="#0f1324"; break; // vide
+        case 1: ctx.fillStyle="#555a6b"; break; // mur
+        case 2: ctx.fillStyle="#2b6a3f"; break; // feuille
+        case 3: ctx.fillStyle="#6a5acd"; break; // sortie
+        case 4: ctx.fillStyle="#1a1f2f"; break; // ombre
+      }
+      ctx.fillRect(x*tileSize,y*tileSize,tileSize,tileSize);
+    }
   }
+  // escargot
+  ctx.fillStyle="#fff";
+  ctx.fillRect(player.x*tileSize,player.y*tileSize,tileSize,tileSize);
+}
+
+function step(dx,dy){
+  let nx = player.x+dx;
+  let ny = player.y+dy;
+  if(nx<0||ny<0||nx>=cols||ny>=rows) return;
+  if(map[ny][nx]===1) return;
+  player.x=nx;player.y=ny;
+  let tile = map[ny][nx];
+  if(tile===2){player.boost=Math.min(100,player.boost+20);player.heat=Math.max(0,player.heat-20);map[ny][nx]=0;}
+  if(tile===3){
+    alert("Niveau terminé !");
+    unlockedLevel=Math.max(unlockedLevel,currentLevel+1);
+  }
+  if(tile===4){player.heat+=20;} else {player.heat=Math.max(0,player.heat-5);}
+  if(player.heat>=100){
+    player.lives--;
+    player.heat=0;
+    if(player.lives<=0){alert("Game Over");loadLevel(currentLevel);return;}
+  }
+  updateHUD();
   draw();
+}
+
+document.addEventListener("keydown",e=>{
+  if(e.key==="ArrowUp") step(0,-1);
+  if(e.key==="ArrowDown") step(0,1);
+  if(e.key==="ArrowLeft") step(-1,0);
+  if(e.key==="ArrowRight") step(1,0);
 });
+
+document.getElementById("newLevelBtn").addEventListener("click",()=>{
+  if(currentLevel<unlockedLevel+1 && currentLevel<127){
+    currentLevel++;
+    loadLevel(currentLevel);
+  }else{
+    alert("Niveau verrouillé !");
+  }
+});
+
+generateLevels();
+loadLevel(0);
 </script>
+
 </body>
 </html>
