@@ -1,153 +1,133 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Escargombre 🐌🔥</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Escargombre 🐌🔥 — Prototype Web</title>
 <style>
-  body{margin:0;background:#0b0e1b;color:#fff;font-family:sans-serif;display:flex;flex-direction:column;align-items:center;padding:10px}
-  canvas{background:#0f1324;border:2px solid #333;image-rendering:pixelated}
-  #mobile-controls{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);display:grid;grid-template-columns:repeat(3,60px);grid-template-rows:repeat(3,60px);gap:10px;z-index:1000}
-  #mobile-controls button{font-size:24px;border:none;border-radius:8px;background:#222;color:#fff}
-  .hud{margin-top:10px;display:flex;gap:20px;align-items:center}
-  .bar{width:120px;height:10px;background:#222;border:1px solid #555;border-radius:5px;overflow:hidden}
-  .fill{height:100%;background:red;width:0%}
+  body{margin:0;background:#0b0d18;color:#fff;font-family:sans-serif;display:flex;flex-direction:column;align-items:center;gap:10px;padding:10px}
+  canvas{background:#111;border:2px solid #444;border-radius:8px}
+  #mobile-controls{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);display:grid;grid-template-columns:repeat(3,60px);grid-template-rows:repeat(3,60px);gap:8px}
+  #mobile-controls button{font-size:24px;border-radius:8px;border:none;background:#222;color:#fff}
+  .hud{display:flex;gap:16px;margin-top:6px}
   .hearts{display:flex;gap:4px}
-  .heart{width:12px;height:12px;background:red;border-radius:2px}
+  .heart{width:16px;height:16px;background:red;border-radius:3px}
+  .bar{width:120px;height:10px;background:#333;border-radius:4px;overflow:hidden}
+  .fill{height:100%;width:0;background:linear-gradient(90deg,#f55,#f00)}
 </style>
 </head>
 <body>
-
 <h1>Escargombre 🐌🔥</h1>
 <canvas id="gameCanvas" width="480" height="320"></canvas>
 
 <div class="hud">
-  <div>Chaleur: <div class="bar"><div class="fill" id="heatBar"></div></div></div>
   <div class="hearts" id="hearts"></div>
-  <button id="newLevelBtn">Nouveau niveau</button>
+  <div class="bar"><div class="fill" id="heatFill"></div></div>
 </div>
 
-<!-- Contrôles mobiles -->
+<button id="newLevel">Niveau suivant</button>
+
 <div id="mobile-controls">
   <div></div><button onclick="step(0,-1)">⬆️</button><div></div>
-  <button onclick="step(-1,0)">⬅️</button><div></div>
-  <button onclick="step(1,0)">➡️</button>
+  <button onclick="step(-1,0)">⬅️</button><div></div><button onclick="step(1,0)">➡️</button>
   <div></div><button onclick="step(0,1)">⬇️</button><div></div>
 </div>
 
 <script>
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
-const heatBar = document.getElementById("heatBar");
-const heartsContainer = document.getElementById("hearts");
+const heatFill = document.getElementById("heatFill");
+const heartsDiv = document.getElementById("hearts");
 const tileSize = 32;
-const cols = 15, rows = 10;
 
-let levels = [];
-let unlockedLevel = 0;
-let currentLevel = 0;
-let player, map;
+const TILES = {empty:0, wall:1, leaf:2, exit:3, shadow:4, monster:5};
 
-function generateLevels(){
-  for(let i=0;i<128;i++){
-    let grid = Array.from({length:rows},()=>Array(cols).fill(0));
-    // murs bordures
-    for(let x=0;x<cols;x++){grid[0][x]=1;grid[rows-1][x]=1;}
-    for(let y=0;y<rows;y++){grid[y][0]=1;grid[y][cols-1]=1;}
-    // obstacles, ombre, feuilles
-    for(let y=1;y<rows-1;y++){
-      for(let x=1;x<cols-1;x++){
-        if(Math.random()<0.1) grid[y][x]=1; // mur
-        else if(Math.random()<0.1) grid[y][x]=4; // ombre
-        else if(Math.random()<0.1) grid[y][x]=2; // feuille
-      }
-    }
-    // sortie violette
-    grid[rows-2][cols-2] = 3;
-    // départ
-    player = {x:1,y:1,heat:0,boost:0,lives:3};
-    levels.push(grid);
-  }
+let level=0, unlocked=0;
+let player, map, monsters, fireballs;
+
+function resetPlayer(){
+  player={x:1,y:1,heat:0,lives:3};
+  fireballs=[];
 }
-
-function loadLevel(n){
-  map = JSON.parse(JSON.stringify(levels[n]));
-  player.x=1;player.y=1;
-  player.heat=0;player.boost=0;player.lives=3;
-  updateHUD();
-  draw();
+function genLevel(n){
+  const w=15,h=10;
+  let m=Array.from({length:h},()=>Array(w).fill(TILES.empty));
+  // murs extérieurs
+  for(let y=0;y<h;y++)for(let x=0;x<w;x++)if(x==0||y==0||x==w-1||y==h-1)m[y][x]=TILES.wall;
+  // obstacles
+  for(let i=0;i<n+5;i++){let x=1+Math.random()*(w-2)|0,y=1+Math.random()*(h-2)|0;m[y][x]=TILES.wall;}
+  // ombres
+  for(let i=0;i<n+3;i++){let x=1+Math.random()*(w-2)|0,y=1+Math.random()*(h-2)|0;m[y][x]=TILES.shadow;}
+  // feuilles
+  for(let i=0;i<4;i++){let x=1+Math.random()*(w-2)|0,y=1+Math.random()*(h-2)|0;m[y][x]=TILES.leaf;}
+  // sortie
+  m[h-2][w-2]=TILES.exit;
+  // monstre (après niveau 5)
+  monsters=[];
+  if(n>5){let x=2+Math.random()*(w-4)|0,y=2+Math.random()*(h-4)|0;m[y][x]=TILES.monster;monsters.push({x,y,dir:Math.random()<0.5?'h':'v',timer:0});}
+  return m;
 }
-
-function updateHUD(){
-  heatBar.style.width = player.heat + "%";
-  heartsContainer.innerHTML="";
-  for(let i=0;i<player.lives;i++){
-    let h=document.createElement("div");
-    h.className="heart";
-    heartsContainer.appendChild(h);
-  }
-}
-
 function draw(){
   ctx.clearRect(0,0,canvas.width,canvas.height);
-  for(let y=0;y<rows;y++){
-    for(let x=0;x<cols;x++){
+  for(let y=0;y<map.length;y++){
+    for(let x=0;x<map[0].length;x++){
       switch(map[y][x]){
-        case 0: ctx.fillStyle="#0f1324"; break; // vide
-        case 1: ctx.fillStyle="#555a6b"; break; // mur
-        case 2: ctx.fillStyle="#2b6a3f"; break; // feuille
-        case 3: ctx.fillStyle="#6a5acd"; break; // sortie
-        case 4: ctx.fillStyle="#1a1f2f"; break; // ombre
+        case TILES.wall: ctx.fillStyle="#555"; break;
+        case TILES.leaf: ctx.fillStyle="green"; break;
+        case TILES.exit: ctx.fillStyle="violet"; break;
+        case TILES.shadow: ctx.fillStyle="#222"; break;
+        case TILES.monster: ctx.fillStyle="#900"; break;
+        default: ctx.fillStyle="#111"; break;
       }
       ctx.fillRect(x*tileSize,y*tileSize,tileSize,tileSize);
     }
   }
-  // escargot
-  ctx.fillStyle="#fff";
+  // joueur
+  ctx.fillStyle="white";
   ctx.fillRect(player.x*tileSize,player.y*tileSize,tileSize,tileSize);
+  // boules de feu
+  ctx.fillStyle="orange";
+  for(let f of fireballs)ctx.fillRect(f.x*tileSize+8,f.y*tileSize+8,16,16);
 }
-
+function updateHUD(){
+  heatFill.style.width=player.heat+"%";
+  heartsDiv.innerHTML="";
+  for(let i=0;i<player.lives;i++){let d=document.createElement("div");d.className="heart";heartsDiv.appendChild(d);}
+}
 function step(dx,dy){
-  let nx = player.x+dx;
-  let ny = player.y+dy;
-  if(nx<0||ny<0||nx>=cols||ny>=rows) return;
-  if(map[ny][nx]===1) return;
-  player.x=nx;player.y=ny;
-  let tile = map[ny][nx];
-  if(tile===2){player.boost=Math.min(100,player.boost+20);player.heat=Math.max(0,player.heat-20);map[ny][nx]=0;}
-  if(tile===3){
-    alert("Niveau terminé !");
-    unlockedLevel=Math.max(unlockedLevel,currentLevel+1);
+  const nx=player.x+dx,ny=player.y+dy;
+  if(map[ny][nx]!==TILES.wall){
+    player.x=nx;player.y=ny;
+    if(map[ny][nx]==TILES.leaf){player.heat=Math.max(0,player.heat-30);map[ny][nx]=TILES.empty;}
+    if(map[ny][nx]==TILES.exit){alert("Niveau terminé !");level++;unlocked=Math.max(unlocked,level);startLevel();}
   }
-  if(tile===4){player.heat+=20;} else {player.heat=Math.max(0,player.heat-5);}
-  if(player.heat>=100){
-    player.lives--;
-    player.heat=0;
-    if(player.lives<=0){alert("Game Over");loadLevel(currentLevel);return;}
-  }
-  updateHUD();
-  draw();
 }
-
+function gameTick(){
+  // chaleur
+  if(map[player.y][player.x]==TILES.shadow)player.heat+=5; else player.heat=Math.max(0,player.heat-1);
+  if(player.heat>=100){player.heat=0;player.lives--;if(player.lives<=0){alert("Game Over");level=0;unlocked=0;startLevel();}}
+  // monstres tirent
+  for(let m of monsters){m.timer++;if(m.timer>30){m.timer=0;fireballs.push({x:m.x,y:m.y,dx:m.dir=='h'?1:0,dy:m.dir=='v'?1:0});}}
+  // boules de feu avancent
+  fireballs=fireballs.filter(f=>{
+    f.x+=f.dx;f.y+=f.dy;
+    if(f.x<0||f.y<0||f.x>=map[0].length||f.y>=map.length)return false;
+    if(map[f.y][f.x]==TILES.wall)return false;
+    if(f.x==player.x&&f.y==player.y){player.lives--;if(player.lives<=0){alert("Game Over");level=0;unlocked=0;startLevel();}return false;}
+    return true;
+  });
+  draw();updateHUD();
+}
+function startLevel(){map=genLevel(level);resetPlayer();draw();updateHUD();}
+document.getElementById("newLevel").onclick=()=>{if(level<unlocked)startLevel();};
 document.addEventListener("keydown",e=>{
-  if(e.key==="ArrowUp") step(0,-1);
-  if(e.key==="ArrowDown") step(0,1);
-  if(e.key==="ArrowLeft") step(-1,0);
-  if(e.key==="ArrowRight") step(1,0);
+  if(e.key=="ArrowUp")step(0,-1);
+  if(e.key=="ArrowDown")step(0,1);
+  if(e.key=="ArrowLeft")step(-1,0);
+  if(e.key=="ArrowRight")step(1,0);
 });
-
-document.getElementById("newLevelBtn").addEventListener("click",()=>{
-  if(currentLevel<unlockedLevel+1 && currentLevel<127){
-    currentLevel++;
-    loadLevel(currentLevel);
-  }else{
-    alert("Niveau verrouillé !");
-  }
-});
-
-generateLevels();
-loadLevel(0);
+startLevel();
+setInterval(gameTick,200);
 </script>
-
 </body>
 </html>
