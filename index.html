@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no" />
 <title>Escargombre 🐌🔥 — Prototype Web</title>
 <style>
   :root{
@@ -13,10 +13,35 @@
   html,body{height:100%}
   body{
     margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Arial;
-    color:var(--ink); background:#070912;
+    color:var(--ink); background:radial-gradient(90vmax 90vmax at 20% -10%,#1b2040 0%,#0b0e1b 70%, #070912 100%);
     display:flex; flex-direction:column; gap:16px; padding:16px;
   }
-  header h1{margin:0; font-size:clamp(20px,3.8vw,36px)}
+  header{display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap}
+  header h1{margin:0; font-size:clamp(18px,3.2vw,32px)}
+  .pill{display:inline-block; padding:4px 10px; border-radius:999px; border:1px solid rgba(255,255,255,0.15); font-size:12px; color:var(--accent2)}
+  .wrap{display:grid; grid-template-columns: 320px 1fr; gap:16px}
+  @media (max-width: 980px){ .wrap{grid-template-columns:1fr} }
+  .card{
+    background:linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02));
+    border:1px solid rgba(255,255,255,0.08);
+    border-radius:14px; padding:14px; box-shadow:0 6px 24px rgba(0,0,0,0.25);
+  }
+  .controls label{display:block; font-weight:600; margin:10px 0 6px}
+  .controls select, .controls button{
+    width:100%; padding:10px 12px; border-radius:10px; border:1px solid rgba(255,255,255,0.15);
+    background:#0f1324; color:var(--ink); font-size:15px; cursor:pointer
+  }
+  .controls .row{display:grid; grid-template-columns: 1fr 1fr; gap:10px}
+  .legend{display:grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap:8px; margin-top:8px; font-size:14px; color:var(--muted)}
+  .legend span{display:flex; align-items:center; gap:8px}
+  .badge{display:inline-block; min-width:18px; height:18px; border-radius:4px; border:1px solid rgba(255,255,255,0.25)}
+  .b-light{background:#e9edf7}
+  .b-shadow{background:#141a2a}
+  .b-leaf{background:#2b6a3f}
+  .b-esc{background:#fffb; border-color:#fff5}
+  .b-exit{background:#6a5acd}
+  .b-wall{background:#555a6b}
+  .b-monster{background:#900}
   canvas{width:100%; height:auto; border-radius:12px; background:#0b0d18; border:1px solid rgba(255,255,255,0.08)}
   .hud{display:grid; grid-template-columns: repeat(3,1fr); gap:10px; margin-top:10px}
   .meter{background:#0c1122; border:1px solid rgba(255,255,255,0.1); border-radius:10px; padding:8px}
@@ -24,180 +49,476 @@
   .meter .bar.heat{background:linear-gradient(90deg,#f7a,#f33)}
   .meter .bar.boost{background:linear-gradient(90deg,#9f7cff,#6af)}
   .meter small{display:block; color:var(--muted)}
-  footer{color:var(--muted); font-size:12px; margin-top:4px}
-
-  /* Joystick */
-  #joystick {
-    position: fixed;
-    bottom: 40px;
-    left: 40px;
-    width: 120px;
-    height: 120px;
-    background: rgba(255,255,255,0.05);
-    border: 2px solid rgba(255,255,255,0.2);
-    border-radius: 50%;
-    touch-action: none;
-    user-select: none;
+  .notice{color:var(--muted); font-size:13px}
+  #status{display:inline-block; margin-top:6px; color:var(--muted)}
+  /* Pad mobile */
+  #mobile-controls{
+    position:fixed; bottom:16px; left:50%; transform:translateX(-50%);
+    display:grid; grid-template-columns: repeat(3, 64px); grid-template-rows: repeat(3, 64px);
+    gap:10px; z-index:1000;
   }
-  #stick {
-    width: 50px;
-    height: 50px;
-    background: rgba(255,0,0,0.7);
-    border-radius: 50%;
-    position: absolute;
-    top: 35px;
-    left: 35px;
-    transition: 0.05s;
+  #mobile-controls button{
+    border-radius:14px; border:1px solid rgba(255,255,255,0.2); background:#141a33; color:#fff; font-size:26px; touch-action:manipulation;
   }
+  @media (min-width:981px){ #mobile-controls{ display:none; } }
 </style>
 </head>
 <body>
   <header>
-    <h1>Escargombre <span style="color:var(--accent2)">prototype</span></h1>
-    <div class="subtitle">🐌 Mange des feuilles pour accélérer, évite l’ombre qui brûle, trouve la sortie 🟪 !</div>
+    <div>
+      <h1>Escargombre <span class="pill">prototype jouable</span></h1>
+      <div class="notice">Mange des <b>feuilles</b> pour accélérer. L’<b>ombre</b> chauffe (tu as 3 vies). Évite les <b>boules de feu</b> 💥. Atteins le <b>cube violet</b>.</div>
+    </div>
+    <div class="card" style="display:flex; align-items:center; gap:8px">
+      <label for="levelSelect" class="notice">Niveau</label>
+      <select id="levelSelect"></select>
+      <button id="newLevel">Nouveau niveau</button>
+    </div>
   </header>
 
-  <main>
-    <canvas id="gameCanvas" width="480" height="360"></canvas>
-    <div class="hud">
-      <div class="meter">
-        <small>Chaleur Ombre</small>
-        <div class="bar heat" id="heatBar"></div>
+  <div class="wrap">
+    <aside class="card controls">
+      <label>Éléments</label>
+      <div class="legend">
+        <span><span class="badge b-esc"></span> Escargot</span>
+        <span><span class="badge b-leaf"></span> Feuille (boost)</span>
+        <span><span class="badge b-light"></span> Lumière</span>
+        <span><span class="badge b-shadow"></span> Ombre (chauffe)</span>
+        <span><span class="badge b-exit"></span> Sortie</span>
+        <span><span class="badge b-wall"></span> Mur</span>
+        <span><span class="badge b-monster"></span> Monstre (tire)</span>
       </div>
-      <div class="meter">
-        <small>Boost Vitesse</small>
-        <div class="bar boost" id="boostBar"></div>
+      <div style="margin-top:12px" class="notice">
+        <b>Contrôles :</b> flèches du clavier / pad tactile.
       </div>
-      <div class="meter">
-        <small>Progrès Niveau</small>
-        <div class="bar" id="progressBar"></div>
-      </div>
-    </div>
-  </main>
+    </aside>
 
-  <!-- joystick -->
-  <div id="joystick">
-    <div id="stick"></div>
+    <main class="card">
+      <canvas id="game" width="576" height="576" aria-label="Zone de jeu"></canvas>
+      <div class="hud">
+        <div class="meter">
+          <small>Chaleur (ombre)</small>
+          <div class="bar heat" id="heatBar"></div>
+        </div>
+        <div class="meter">
+          <small>Boost (feuilles)</small>
+          <div class="bar boost" id="boostBar"></div>
+        </div>
+        <div class="meter">
+          <small>Progression</small>
+          <div class="bar" id="progressBar"></div>
+        </div>
+      </div>
+      <span id="status">Prêt.</span>
+    </main>
   </div>
 
-  <footer>Prototype Escargombre — 2025</footer>
+  <!-- PAD MOBILE -->
+  <div id="mobile-controls" aria-label="Pad mobile">
+    <div></div><button data-dir="up">⬆️</button><div></div>
+    <button data-dir="left">⬅️</button><div></div><button data-dir="right">➡️</button>
+    <div></div><button data-dir="down">⬇️</button><div></div>
+  </div>
 
 <script>
-const canvas = document.getElementById('gameCanvas');
-const ctx = canvas.getContext('2d');
-const heatBar = document.getElementById('heatBar');
-const boostBar = document.getElementById('boostBar');
-const progressBar = document.getElementById('progressBar');
+(() => {
+  // --- Types & constantes ---
+  const T = { LIGHT:0, SHADOW:1, WALL:2, LEAF:3, EXIT:4, MONSTER:5 };
+  const TILE = 48; // 12x12
+  const MAX_LEVELS = 128;
 
-const tileSize = 32;
-let map = [
-  [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-  [1,0,0,2,0,0,0,0,0,0,0,0,0,3,1],
-  [1,0,1,1,1,0,1,1,1,0,1,1,1,0,1],
-  [1,0,0,0,0,0,0,0,0,0,0,2,0,0,1],
-  [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
-];
-let player = {x:1, y:1, heat:0, boost:0, progress:0, lives:3};
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+  const heatBar   = document.getElementById('heatBar');
+  const boostBar  = document.getElementById('boostBar');
+  const progBar   = document.getElementById('progressBar');
+  const statusEl  = document.getElementById('status');
+  const levelSel  = document.getElementById('levelSelect');
+  const newLevelBtn = document.getElementById('newLevel');
 
-function draw(){
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-  for(let y=0;y<map.length;y++){
-    for(let x=0;x<map[y].length;x++){
-      switch(map[y][x]){
-        case 0: ctx.fillStyle="#0f1324"; break; // sol
-        case 1: ctx.fillStyle="#555a6b"; break; // mur
-        case 2: ctx.fillStyle="#2b6a3f"; break; // feuille
-        case 3: ctx.fillStyle="#6a5acd"; break; // sortie
+  // --- état global ---
+  let G = {
+    level:1,
+    unlockedMax:1,
+    rng:null,
+    N:12,
+    grid:[],
+    start:{x:1,y:1}, exit:{x:10,y:10},
+    monsters:[],
+    fireballs:[],
+    tick:0,
+    player:{
+      x:1, y:1, heat:0, boost:0, lives:3, alive:true, invuln:0,
+    },
+    completed:false,
+  };
+
+  // --- RNG déterministe par niveau ---
+  function makeRNG(seed){
+    let s = (seed>>>0) || 1;
+    return ()=>((s = (s*1664525 + 1013904223)>>>0) / 4294967296);
+  }
+  function rand(){ return G.rng(); }
+  function rint(a,b){ return Math.floor(rand()*(b-a+1))+a; }
+  function choice(arr){ return arr[Math.floor(rand()*arr.length)]; }
+
+  // --- Génération de niveau ---
+  function generateLevel(idx){
+    G.level = idx;
+    G.rng = makeRNG(0xC0DE ^ idx);
+    const N = G.N;
+
+    // grille vide lumière
+    const grid = Array.from({length:N}, ()=> Array.from({length:N}, ()=>T.LIGHT));
+
+    // bordures mur
+    for (let i=0;i<N;i++){ grid[0][i]=grid[N-1][i]=grid[i][0]=grid[i][N-1]=T.WALL; }
+
+    // zones d'ombre + murs
+    const shadowRate = 0.30 + Math.min(0.25, (idx-1)/MAX_LEVELS*0.35);
+    const wallRate   = 0.06 + Math.min(0.12, (idx-1)/MAX_LEVELS*0.18);
+    for (let y=1;y<N-1;y++){
+      for (let x=1;x<N-1;x++){
+        if (rand()<shadowRate) grid[y][x]=T.SHADOW;
+        if (rand()<wallRate && grid[y][x]!==T.SHADOW) grid[y][x]=T.WALL;
       }
-      ctx.fillRect(x*tileSize, y*tileSize, tileSize, tileSize);
+    }
+
+    // feuilles
+    const leafRate = 0.10 - Math.min(0.06, (idx-1)/MAX_LEVELS*0.08);
+    for (let y=1;y<N-1;y++){
+      for (let x=1;x<N-1;x++){
+        if ([T.LIGHT,T.SHADOW].includes(grid[y][x]) && rand()<leafRate) grid[y][x]=T.LEAF;
+      }
+    }
+
+    // start / exit
+    grid[1][1]=T.LIGHT; G.start={x:1,y:1};
+    let ex={x:N-2,y:N-2};
+    grid[ex.y][ex.x]=T.EXIT; G.exit=ex;
+
+    // au moins 1 monstre (bloc rouge) + plus aux niveaux hauts
+    const mCount = 1 + Math.floor((idx-1)/16); // 1..9
+    const monsters=[];
+    for (let i=0;i<mCount;i++){
+      let mx,my;
+      let tries=0;
+      do{
+        mx=rint(2,N-3); my=rint(2,N-3); tries++;
+      } while ((grid[my][mx]!==T.LIGHT && grid[my][mx]!==T.SHADOW) || (mx+my<6) || (Math.abs(mx-ex.x)+Math.abs(my-ex.y)<4) && tries<200);
+      grid[my][mx]=T.MONSTER;
+      monsters.push({x:mx,y:my, cd:rint(15,35), dir:choice([[1,0],[-1,0],[0,1],[0,-1]])});
+    }
+
+    G.grid=grid;
+    G.monsters=monsters;
+    G.fireballs=[];
+    G.player={x:G.start.x, y:G.start.y, heat:0, boost:0, lives:3, alive:true, invuln:20};
+    G.completed=false;
+    G.tick=0;
+
+    status(`Niveau ${G.level} — trouve la sortie violette, évite l’ombre et les boules de feu.`);
+    draw(); updateHUD(); updateProgress();
+  }
+
+  // --- HUD ---
+  function updateHUD(){
+    const maxHeat=100;
+    heatBar.style.width = `${Math.min(100, (G.player.heat/maxHeat)*100)}%`;
+    boostBar.style.width = `${Math.min(100, (G.player.boost/12)*100)}%`;
+  }
+  function updateProgress(){
+    const max = (G.N-2)+(G.N-2);
+    const val = (G.player.x-1)+(G.player.y-1);
+    const pct = G.completed?100: Math.max(0, Math.min(100, Math.floor((val/max)*80)));
+    progBar.style.width = pct+"%";
+  }
+  function status(msg){ statusEl.textContent = msg; }
+
+  // --- dessin ---
+  function draw(){
+    const N=G.N, grid=G.grid;
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    // tuiles
+    for (let y=0;y<N;y++){
+      for (let x=0;x<N;x++){
+        const t = grid[y][x];
+        if (t===T.LIGHT || t===T.LEAF || t===T.EXIT) ctx.fillStyle = '#e9edf7';
+        else if (t===T.SHADOW) ctx.fillStyle = '#141a2a';
+        else if (t===T.WALL) ctx.fillStyle = '#565d76';
+        else if (t===T.MONSTER) ctx.fillStyle = '#e9edf7';
+        ctx.fillRect(x*TILE, y*TILE, TILE, TILE);
+
+        if (t===T.LEAF) drawLeaf(x,y);
+        if (t===T.EXIT) drawExit(x,y);
+        if (t===T.MONSTER) drawMonster(x,y);
+      }
+    }
+    // grille légère
+    ctx.strokeStyle='rgba(255,255,255,0.05)';
+    for (let i=0;i<=N;i++){
+      ctx.beginPath(); ctx.moveTo(0,i*TILE); ctx.lineTo(N*TILE,i*TILE); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(i*TILE,0); ctx.lineTo(i*TILE,N*TILE); ctx.stroke();
+    }
+    // player
+    drawSnail(G.player.x,G.player.y, G.player.heat/100, G.player.invuln>0);
+
+    // fireballs
+    for (const fb of G.fireballs) drawFireball(fb);
+  }
+
+  function drawLeaf(x,y){
+    const cx = x*TILE + TILE/2, cy = y*TILE + TILE/2;
+    ctx.fillStyle = '#2b6a3f';
+    ctx.beginPath(); ctx.ellipse(cx, cy, 12, 18, Math.PI/6, 0, Math.PI*2); ctx.fill();
+    ctx.strokeStyle = '#9ad7a7'; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.moveTo(cx, cy-12); ctx.lineTo(cx, cy+12); ctx.stroke(); ctx.lineWidth=1;
+  }
+  function drawExit(x,y){
+    ctx.fillStyle = '#6a5acd';
+    ctx.fillRect(x*TILE+8, y*TILE+8, TILE-16, TILE-16);
+    ctx.fillStyle = '#cabdff';
+    ctx.fillRect(x*TILE+TILE/2-4, y*TILE+10, 8, 12);
+  }
+  function drawMonster(x,y){
+    const px=x*TILE, py=y*TILE;
+    ctx.fillStyle='#900';
+    ctx.fillRect(px+8, py+8, TILE-16, TILE-16);
+    ctx.fillStyle='#f44'; ctx.fillRect(px+14, py+14, TILE-28, TILE-28);
+  }
+  function drawSnail(x,y,heatRatio,blink){
+    const px = x*TILE, py = y*TILE;
+    if (!(blink && (G.tick%4<2))){
+      // coquille
+      ctx.fillStyle = '#f3e7c6';
+      ctx.beginPath(); ctx.arc(px+TILE*0.6, py+TILE*0.55, 14, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#d8c79e';
+      ctx.beginPath(); ctx.arc(px+TILE*0.6, py+TILE*0.55, 7, 0, Math.PI*2); ctx.fill();
+      // corps
+      ctx.fillStyle = '#b5ceb7';
+      ctx.fillRect(px+8, py+TILE*0.6, 28, 10);
+      ctx.fillRect(px+8, py+TILE*0.5, 12, 8);
+      ctx.strokeStyle = '#9bb0a0'; ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(px+12, py+TILE*0.5); ctx.lineTo(px+6, py+TILE*0.35);
+      ctx.moveTo(px+18, py+TILE*0.5); ctx.lineTo(px+12, py+TILE*0.3);
+      ctx.stroke();
+    }
+    // lueur chaleur
+    if (heatRatio>0.01){
+      const alpha = Math.min(0.6, heatRatio+0.1);
+      ctx.fillStyle = `rgba(255,80,80,${alpha})`;
+      ctx.beginPath(); ctx.arc(px+TILE/2, py+TILE/2, 20+heatRatio*18, 0, Math.PI*2); ctx.fill();
+    }
+    // VIES : petits carrés rouges au-dessus de la tête
+    const hearts = G.player.lives;
+    const size = 8, gap = 3;
+    const totalW = hearts*size + (hearts-1)*gap;
+    let sx = px + TILE/2 - totalW/2;
+    const sy = py - 6;
+    for (let i=0;i<hearts;i++){
+      ctx.fillStyle='#d33';
+      ctx.fillRect(sx, sy, size, size);
+      ctx.strokeStyle='#800'; ctx.strokeRect(sx, sy, size, size);
+      sx += size+gap;
     }
   }
-  // escargot
-  ctx.fillStyle="#fff";
-  ctx.fillRect(player.x*tileSize, player.y*tileSize, tileSize, tileSize);
-
-  // vies (petits cœurs rouges)
-  for(let i=0;i<player.lives;i++){
-    ctx.fillStyle="red";
-    ctx.fillRect(player.x*tileSize + i*12, player.y*tileSize-10, 10, 10);
+  function drawFireball(fb){
+    ctx.fillStyle='orange';
+    ctx.beginPath();
+    ctx.arc(fb.px, fb.py, 6, 0, Math.PI*2); ctx.fill();
+    ctx.strokeStyle='#ffc14d'; ctx.beginPath(); ctx.arc(fb.px, fb.py, 6, 0, Math.PI*2); ctx.stroke();
   }
-}
 
-function step(dx,dy){
-  const nx = player.x + dx;
-  const ny = player.y + dy;
-  if(map[ny][nx] !== 1){
-    player.x = nx; player.y = ny;
-    const tile = map[ny][nx];
-    if(tile === 2) player.boost = Math.min(100, player.boost+20);
-    if(tile === 3) alert("🎉 Niveau terminé !");
-    player.heat = Math.min(100, player.heat+5);
-    player.progress = Math.min(100, player.progress+10);
-    if(player.heat >= 100){
-      player.lives--;
-      player.heat = 0;
-      if(player.lives <= 0){ alert("💀 Tu as perdu !"); }
+  // --- utilitaires carte ---
+  function isWalkable(x,y){
+    if (x<0||y<0||x>=G.N||y>=G.N) return false;
+    const t = G.grid[y][x];
+    return t!==T.WALL && t!==T.MONSTER;
+  }
+  function tileAtPixel(px,py){
+    return { x: Math.floor(px/TILE), y: Math.floor(py/TILE) };
+  }
+
+  // --- Déplacements & règles ---
+  function step(dx,dy){
+    if (!G.player.alive || G.completed) return;
+    const speedStep = 1 + (G.player.boost>0 ? 1 : 0);
+    let moves = Math.max(1, speedStep);
+
+    while (moves-->0){
+      const nx = G.player.x + Math.sign(dx);
+      const ny = G.player.y + Math.sign(dy);
+      if (!isWalkable(nx,ny)) break;
+      G.player.x = nx; G.player.y = ny;
+
+      const t = G.grid[ny][nx];
+
+      // feuille -> boost
+      if (t===T.LEAF){ G.grid[ny][nx]=T.LIGHT; G.player.boost=Math.min(12, G.player.boost+6); status('Miam, boost !'); }
+
+      // chaleur
+      if (t===T.SHADOW) G.player.heat = Math.min(100, G.player.heat + 12);
+      else G.player.heat = Math.max(0, G.player.heat - 10);
+
+      // usure du boost
+      if (G.player.boost>0) G.player.boost--;
+
+      // sortie
+      if (t===T.EXIT){
+        completeLevel();
+        break;
+      }
+
+      // brûlure par chaleur -> perte d'une vie (pas instantané)
+      if (G.player.heat>=100){
+        takeHit('Tu as brûlé dans l’ombre !');
+        break;
+      }
     }
-    updateHUD();
+
+    updateHUD(); updateProgress(); draw();
   }
-}
 
-function updateHUD(){
-  heatBar.style.width = player.heat + "%";
-  boostBar.style.width = player.boost + "%";
-  progressBar.style.width = player.progress + "%";
-}
-
-draw();
-updateHUD();
-
-// clavier
-document.addEventListener('keydown',e=>{
-  switch(e.key){
-    case 'ArrowUp': step(0,-1); break;
-    case 'ArrowDown': step(0,1); break;
-    case 'ArrowLeft': step(-1,0); break;
-    case 'ArrowRight': step(1,0); break;
+  function completeLevel(){
+    if (G.completed) return;
+    G.completed=true;
+    status(`✅ Niveau ${G.level} terminé !`);
+    if (G.level < MAX_LEVELS){
+      G.unlockedMax = Math.max(G.unlockedMax, G.level+1);
+      refreshLevelSelect();
+    }
+    progBar.style.width='100%';
   }
-  draw();
-});
 
-// joystick
-let joystick = document.getElementById("joystick");
-let stick = document.getElementById("stick");
-let joyActive = false;
-
-joystick.addEventListener("touchstart", e=>{
-  joyActive = true;
-}, false);
-joystick.addEventListener("touchend", e=>{
-  joyActive = false;
-  stick.style.left = "35px";
-  stick.style.top = "35px";
-}, false);
-joystick.addEventListener("touchmove", e=>{
-  if(!joyActive) return;
-  let touch = e.touches[0];
-  let rect = joystick.getBoundingClientRect();
-  let x = touch.clientX - (rect.left + rect.width/2);
-  let y = touch.clientY - (rect.top + rect.height/2);
-  let dist = Math.sqrt(x*x + y*y);
-  let maxDist = rect.width/2 - 20;
-  if(dist > maxDist){
-    x *= maxDist/dist;
-    y *= maxDist/dist;
+  function takeHit(why){
+    if (G.player.invuln>0) return;
+    G.player.lives--;
+    G.player.invuln = 40;
+    G.player.heat=0; // refroidit
+    if (G.player.lives<=0){
+      status(`💥 ${why} — Recommence le niveau.`);
+      // reset niveau (mais progrès de déblocage conservé)
+      G.player.lives=3; G.player.boost=0; G.player.x=G.start.x; G.player.y=G.start.y;
+    } else {
+      status(`Aïe ! (${G.player.lives} vies restantes)`);
+      G.player.x=G.start.x; G.player.y=G.start.y;
+    }
   }
-  stick.style.left = (rect.width/2 + x - 25) + "px";
-  stick.style.top = (rect.height/2 + y - 25) + "px";
 
-  let dx = Math.round(x / maxDist);
-  let dy = Math.round(y / maxDist);
+  // --- Monstres & boules de feu ---
+  function monsterThink(){
+    for (const m of G.monsters){
+      m.cd--;
+      if (m.cd<=0){
+        // viser approximativement le joueur (axe dominant), sinon direction aléatoire
+        const dx = G.player.x - m.x;
+        const dy = G.player.y - m.y;
+        let dir=[0,0];
+        if (Math.abs(dx) > Math.abs(dy)) dir = [Math.sign(dx),0]; else dir=[0,Math.sign(dy)];
+        if (dir[0]===0 && dir[1]===0) dir = choice([[1,0],[-1,0],[0,1],[0,-1]]);
+        shootFireball(m.x, m.y, dir[0], dir[1]);
+        m.cd = 22 + rint(0,18);
+      }
+    }
+  }
 
-  if(dx!==0 || dy!==0){
-    step(dx, dy);
+  function shootFireball(tx,ty,dx,dy){
+    const speed = 6; // px par tick
+    const startPx = tx*TILE + TILE/2 + dx*10;
+    const startPy = ty*TILE + TILE/2 + dy*10;
+    G.fireballs.push({px:startPx, py:startPy, vx:dx*speed, vy:dy*speed, alive:true});
+  }
+
+  function updateFireballs(){
+    for (const fb of G.fireballs){
+      if (!fb.alive) continue;
+      fb.px += fb.vx; fb.py += fb.vy;
+      // mur ?
+      const tpos = tileAtPixel(fb.px, fb.py);
+      if (tpos.x<0||tpos.y<0||tpos.x>=G.N||tpos.y>=G.N){ fb.alive=false; continue; }
+      const t = G.grid[tpos.y][tpos.x];
+      if (t===T.WALL){ fb.alive=false; continue; }
+
+      // collision joueur (distance au centre)
+      const pcx = G.player.x*TILE + TILE/2;
+      const pcy = G.player.y*TILE + TILE/2;
+      const dx = fb.px - pcx, dy = fb.py - pcy;
+      if (dx*dx + dy*dy <= 16*16){
+        fb.alive=false;
+        takeHit('Touché par une boule de feu !');
+      }
+    }
+    // nettoyage
+    G.fireballs = G.fireballs.filter(f=>f.alive);
+  }
+
+  // --- Boucle jeu ---
+  function tick(){
+    G.tick++;
+    if (G.player.invuln>0) G.player.invuln--;
+    monsterThink();
+    updateFireballs();
     draw();
+    requestAnimationFrame(tick);
   }
-}, false);
+
+  // --- Entrées ---
+  window.addEventListener('keydown', (e)=>{
+    if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)){
+      e.preventDefault();
+      const map = {ArrowUp:[0,-1], ArrowDown:[0,1], ArrowLeft:[-1,0], ArrowRight:[1,0]};
+      const [dx,dy] = map[e.key];
+      step(dx,dy);
+    }
+  });
+
+  // Pad mobile
+  document.querySelectorAll('#mobile-controls button').forEach(b=>{
+    b.addEventListener('touchstart', (e)=>{ e.preventDefault(); dirBtn(b); }, {passive:false});
+    b.addEventListener('click', ()=> dirBtn(b));
+  });
+  function dirBtn(b){
+    const d=b.dataset.dir;
+    const map={up:[0,-1],down:[0,1],left:[-1,0],right:[1,0]};
+    const v=map[d]; if (!v) return; step(v[0],v[1]);
+  }
+
+  // --- UI niveaux ---
+  function refreshLevelSelect(){
+    const cur = G.level;
+    levelSel.innerHTML='';
+    for (let i=1;i<=MAX_LEVELS;i++){
+      const opt=document.createElement('option');
+      opt.value=i; opt.textContent=`${i}`;
+      if (i>G.unlockedMax) opt.disabled=true;
+      if (i===cur) opt.selected=true;
+      levelSel.appendChild(opt);
+    }
+  }
+  levelSel.addEventListener('change', ()=>{
+    const to = parseInt(levelSel.value,10);
+    if (to<=G.unlockedMax){ generateLevel(to); }
+    else { levelSel.value=G.level; status('🔒 Niveau non débloqué.'); }
+  });
+
+  newLevelBtn.addEventListener('click', ()=>{
+    if (G.completed && G.level<MAX_LEVELS){
+      generateLevel(G.level+1);
+      refreshLevelSelect();
+    } else if (G.level < G.unlockedMax){
+      generateLevel(G.level+1);
+      refreshLevelSelect();
+    } else {
+      status('Finis ce niveau pour débloquer le suivant.');
+    }
+  });
+
+  // --- init ---
+  generateLevel(1);
+  refreshLevelSelect();
+  requestAnimationFrame(tick);
+})();
 </script>
 </body>
 </html>
